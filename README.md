@@ -1,6 +1,8 @@
 # FlashPictureCapturer
 
-A new Flutter project.
+QQ/TIM FlashPicture Getter.
+
+You can get release here.
 
 ## Getting Started
 
