@@ -2,9 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 
 void main() {
   notification = FlutterLocalNotificationsPlugin();
@@ -36,7 +37,9 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  bool isRunning = false;
   bool isQQ = true;
+  int id = 1;
   String picture = '';
 
   Future<String> get _localPath async {
@@ -67,14 +70,16 @@ class _MyHomePageState extends State<MyHomePage> {
             FlatButton(
               child: Text('切换为 ' + (isQQ ? 'TIM' : 'QQ')),
               onPressed: _toggleQQTim,
-            )
+            ),
+            // Text('已知问题：'),
+            // Text('本机向本机发送的闪照无法获取')
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showNotification,
         tooltip: '显示通知',
-        child: Icon(Icons.play_arrow),
+        child: Icon(isRunning ? Icons.stop : Icons.play_arrow),
       ),
     );
   }
@@ -85,6 +90,17 @@ class _MyHomePageState extends State<MyHomePage> {
     return status == PermissionStatus.granted;
   }
 
+  Future clickNotification(String payload) async {
+    switch (payload) {
+      case 'saveResult':
+        getFlashPicture();
+        break;
+      default:
+        _openImage(payload);
+        break;
+    }
+  }
+
   Future copyFlashPicture(String path) async {
     var dir = Directory(await _toPath);
     if (!dir.existsSync()) {
@@ -93,10 +109,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
     var result = (await _toPath) + picture + '.png';
     File(path).copySync(result);
-    // showToast('已保存至: ' + result);
+    _showResultNotification(picture + ".png");
   }
 
-  Future getFlashPicture(String payload) async {
+  Future getFlashPicture() async {
     // 1. Check whether the cache folder exists
     var exists = await _localPathExists();
     if (!exists) {
@@ -122,11 +138,10 @@ class _MyHomePageState extends State<MyHomePage> {
           : -1);
 
       for (var item in list) {
-        // showToast('发现闪照: ' + item.uri.pathSegments.last);
+        showToast('发现闪照: ' + item.uri.pathSegments.last);
         // showToast('修改时间: ' + item.statSync().modified.toString());
         picture = item.uri.pathSegments.last;
         await copyFlashPicture(item.path);
-        // break;
       }
     }
 
@@ -146,13 +161,14 @@ class _MyHomePageState extends State<MyHomePage> {
       exit(0);
     }
 
-    var initializationSettingsAndroid =
-        new AndroidInitializationSettings('app_icon');
-    var initializationSettingsIOS = new IOSInitializationSettings();
-    var initializationSettings = new InitializationSettings(
-        initializationSettingsAndroid, initializationSettingsIOS);
-    notification.initialize(initializationSettings,
-        onSelectNotification: getFlashPicture);
+    var initializationSettings = InitializationSettings(
+      AndroidInitializationSettings('app_icon'),
+      IOSInitializationSettings(),
+    );
+    notification.initialize(
+      initializationSettings,
+      onSelectNotification: clickNotification,
+    );
 
     checkPermission().then((valid) {
       if (!valid) {
@@ -172,31 +188,94 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void showToast(String message) {
     Fluttertoast.showToast(
-        msg: message,
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIos: 3,
-        backgroundColor: Colors.blueGrey,
-        textColor: Colors.white,
-        fontSize: 12.0);
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      timeInSecForIos: 3,
+      backgroundColor: Colors.blueGrey,
+      textColor: Colors.white,
+      fontSize: 12.0,
+    );
   }
 
   Future<bool> _localPathExists() async => Directory(await _localPath).exists();
 
+  void _openImage(String name) async {
+    OpenFile.open((await _toPath) + name);
+  }
+
   void _showNotification() {
-    var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
-        'fpc', 'FlashPicture Capturer', 'Capture flash picture of QQ or TIM.',
-        importance: Importance.Max, priority: Priority.Max, autoCancel: false);
-    var iOSPlatformChannelSpecifics = new IOSNotificationDetails();
-    var platformChannelSpecifics = new NotificationDetails(
-        androidPlatformChannelSpecifics, iOSPlatformChannelSpecifics);
-    notification.show(0, (isQQ ? 'QQ' : 'TIM') + ' 闪照获取工具', '当需要保存闪照时，点击该通知。',
-        platformChannelSpecifics);
+    _toggleRunning();
+    if (!isRunning) {
+      notification.cancel(0);
+      return;
+    }
+
+    var androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      'fpc',
+      'FlashPicture Capturer',
+      'Capture flash picture of QQ or TIM.',
+      importance: Importance.Max,
+      priority: Priority.Max,
+      autoCancel: false,
+      ongoing: true,
+      style: AndroidNotificationStyle.Default,
+      styleInformation: DefaultStyleInformation(true, true),
+    );
+    var platformChannelSpecifics = NotificationDetails(
+      androidPlatformChannelSpecifics,
+      IOSNotificationDetails(),
+    );
+    notification.show(
+      0,
+      (isQQ ? 'QQ' : 'TIM') + ' 闪照获取工具',
+      '当需要保存闪照时，点击该通知。',
+      platformChannelSpecifics,
+      payload: "saveResult",
+    );
+  }
+
+  void _showResultNotification(String name) async {
+    var androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      'fpc',
+      'FlashPicture Capturer',
+      'Capture flash picture of QQ or TIM.',
+      importance: Importance.Max,
+      priority: Priority.Max,
+      style: AndroidNotificationStyle.BigPicture,
+      styleInformation: BigPictureStyleInformation(
+        (await _toPath) + name,
+        BitmapSource.FilePath,
+        largeIcon: (await _toPath) + name,
+        largeIconBitmapSource: BitmapSource.FilePath,
+        contentTitle: '闪照获取成功！点击打开~',
+        htmlFormatContentTitle: true,
+        summaryText: name,
+        htmlFormatSummaryText: true,
+      ),
+    );
+    var platformChannelSpecifics = NotificationDetails(
+      androidPlatformChannelSpecifics,
+      IOSNotificationDetails(),
+    );
+    notification.show(
+      id++,
+      (isQQ ? 'QQ' : 'TIM') + ' 闪照获取工具',
+      '',
+      platformChannelSpecifics,
+      payload: name,
+    );
   }
 
   void _toggleQQTim() {
     setState(() {
       isQQ = !isQQ;
+    });
+  }
+
+  void _toggleRunning() {
+    setState(() {
+      isRunning = !isRunning;
     });
   }
 }
