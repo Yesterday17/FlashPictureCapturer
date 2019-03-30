@@ -101,14 +101,41 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Future<bool> isEncrypted(String path) async {
+    var bytes = File(path).readAsBytesSync();
+    // ENCRYPT:
+    return bytes[0] == 0x45 &&
+        bytes[1] == 0x4E &&
+        bytes[2] == 0x43 &&
+        bytes[3] == 0x52 &&
+        bytes[4] == 0x59 &&
+        bytes[5] == 0x50 &&
+        bytes[6] == 0x54 &&
+        bytes[7] == 0x3A;
+  }
+
   Future copyFlashPicture(String path) async {
     var dir = Directory(await _toPath);
     if (!dir.existsSync()) {
       dir.createSync();
     }
 
+    debugPrint(File(path).hashCode.toString());
+
+    if (await isEncrypted(path)) {
+      File(path).deleteSync();
+      showToast('发现加密闪照，已移除。\n请尝试重新获得图片！');
+      return;
+    }
+
     var result = (await _toPath) + picture + '.png';
+    if (File(result).existsSync()) {
+      picture = '';
+      return;
+    }
+
     File(path).copySync(result);
+    showToast('发现新闪照: ' + picture);
     _showResultNotification(picture + ".png");
   }
 
@@ -138,7 +165,7 @@ class _MyHomePageState extends State<MyHomePage> {
           : -1);
 
       for (var item in list) {
-        showToast('发现闪照: ' + item.uri.pathSegments.last);
+        // showToast('发现闪照: ' + item.uri.pathSegments.last);
         // showToast('修改时间: ' + item.statSync().modified.toString());
         picture = item.uri.pathSegments.last;
         await copyFlashPicture(item.path);
@@ -147,7 +174,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // FlashPicture Not Found
     if (picture == '') {
-      showToast('未找到闪照！');
+      showToast('未发现新的闪照！');
     }
     picture = ''; // Reset picture
   }
@@ -172,6 +199,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     checkPermission().then((valid) {
       if (!valid) {
+        showToast('存储权限为必须权限。');
         requestPermission();
       }
     });
@@ -181,7 +209,6 @@ class _MyHomePageState extends State<MyHomePage> {
     Map<PermissionGroup, PermissionStatus> status =
         await PermissionHandler().requestPermissions([PermissionGroup.storage]);
     if (status[PermissionGroup.storage] != PermissionStatus.granted) {
-      showToast('存储权限必须！');
       exit(0);
     }
   }
