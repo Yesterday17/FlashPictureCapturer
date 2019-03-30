@@ -68,16 +68,31 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: <Widget>[
-            Text('点击右下角按钮打开通知'),
-            Text('在想要保存闪照时点击通知即可'),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Tips: ',
+                    textScaleFactor: 1.5,
+                  ),
+                  Text('1. 点击右下角按钮打开通知'),
+                  Text('2. 在想要保存闪照时点击通知即可'),
+                  Text('3. 出现“发现加密闪照”时请重试'),
+                  Text('4. 出现“未发现新的闪照”时请尝试接收一张别的闪照'),
+                  Text('5. 任何一次成功保存闪照都是玄学'),
+                ],
+              ),
+            ),
             FlatButton(
               child: Text('切换为 ' + (isQQ ? 'TIM' : 'QQ')),
               onPressed: _toggleQQTim,
             ),
-            // Text('已知问题：'),
-            // Text('本机向本机发送的闪照无法获取')
+            Text(''),
+            Text(''),
           ],
         ),
       ),
@@ -266,7 +281,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
     notification.show(
       0,
-      (isQQ ? 'QQ' : 'TIM') + ' 闪照获取工具',
+      'QQ/TIM 闪照获取工具',
       '当需要保存闪照时，点击该通知。',
       platformChannelSpecifics,
       payload: "saveResult",
@@ -299,7 +314,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
     notification.show(
       id++,
-      (isQQ ? 'QQ' : 'TIM') + ' 闪照获取工具',
+      'QQ/TIM 闪照获取工具',
       '',
       platformChannelSpecifics,
       payload: name,
