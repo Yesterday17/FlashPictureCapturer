@@ -6,13 +6,18 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   notification = FlutterLocalNotificationsPlugin();
-  runApp(MyApp());
+  SharedPreferences.getInstance().then((prefs) {
+    preferences = prefs;
+    runApp(MyApp());
+  });
 }
 
 FlutterLocalNotificationsPlugin notification;
+SharedPreferences preferences;
 
 class MyApp extends StatelessWidget {
   @override
@@ -101,19 +106,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<bool> isEncrypted(String path) async {
-    var bytes = File(path).readAsBytesSync();
-    // ENCRYPT:
-    return bytes[0] == 0x45 &&
-        bytes[1] == 0x4E &&
-        bytes[2] == 0x43 &&
-        bytes[3] == 0x52 &&
-        bytes[4] == 0x59 &&
-        bytes[5] == 0x50 &&
-        bytes[6] == 0x54 &&
-        bytes[7] == 0x3A;
-  }
-
   Future copyFlashPicture(String path) async {
     var dir = Directory(await _toPath);
     if (!dir.existsSync()) {
@@ -197,6 +189,13 @@ class _MyHomePageState extends State<MyHomePage> {
       onSelectNotification: clickNotification,
     );
 
+    isRunning = preferences.getBool("isRunning") ?? false;
+    isQQ = preferences.getBool("isQQ") ?? true;
+
+    if (isRunning) {
+      isRunning = false;
+      _showNotification();
+    }
     checkPermission().then((valid) {
       if (!valid) {
         showToast('存储权限为必须权限。');
@@ -205,7 +204,20 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  requestPermission() async {
+  Future<bool> isEncrypted(String path) async {
+    var bytes = await File(path).readAsBytes();
+    // ENCRYPT:
+    return bytes[0] == 0x45 &&
+        bytes[1] == 0x4E &&
+        bytes[2] == 0x43 &&
+        bytes[3] == 0x52 &&
+        bytes[4] == 0x59 &&
+        bytes[5] == 0x50 &&
+        bytes[6] == 0x54 &&
+        bytes[7] == 0x3A;
+  }
+
+  void requestPermission() async {
     Map<PermissionGroup, PermissionStatus> status =
         await PermissionHandler().requestPermissions([PermissionGroup.storage]);
     if (status[PermissionGroup.storage] != PermissionStatus.granted) {
@@ -227,14 +239,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<bool> _localPathExists() async => Directory(await _localPath).exists();
 
-  void _openImage(String name) async {
-    OpenFile.open((await _toPath) + name);
-  }
+  Future _openImage(String name) =>
+      _toPath.then((String path) => OpenFile.open(path + name));
 
   void _showNotification() {
-    _toggleRunning();
-    if (!isRunning) {
+    if (isRunning) {
       notification.cancel(0);
+      _toggleRunning();
       return;
     }
 
@@ -260,6 +271,7 @@ class _MyHomePageState extends State<MyHomePage> {
       platformChannelSpecifics,
       payload: "saveResult",
     );
+    _toggleRunning();
   }
 
   void _showResultNotification(String name) async {
@@ -294,13 +306,15 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _toggleQQTim() {
+  void _toggleQQTim() async {
+    await preferences.setBool("isQQ", !isQQ);
     setState(() {
       isQQ = !isQQ;
     });
   }
 
-  void _toggleRunning() {
+  void _toggleRunning() async {
+    await preferences.setBool("isRunning", !isRunning);
     setState(() {
       isRunning = !isRunning;
     });
