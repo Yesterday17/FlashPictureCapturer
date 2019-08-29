@@ -1,7 +1,7 @@
 name: fpc
 description: QQ/TIM FlashPicture Getter.
 
-version: 1.0.0+3
+version: 1.0.1
 
 environment:
   sdk: ">=2.1.0 <3.0.0"
