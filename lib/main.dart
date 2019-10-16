@@ -48,14 +48,16 @@ class _MyHomePageState extends State<MyHomePage> {
   bool isTaskRunning = false;
   bool isQQ = true;
   int id = 1;
-  String picture = '';
 
-  Future<String> get _localPath async {
+  Future<List<String>> get _localPaths async {
     final directory = await getExternalStorageDirectory();
-    return directory.path +
-        '/tencent/' +
-        (isQQ ? 'MobileQQ' : 'Tim') +
-        '/diskcache';
+    final base = directory.path + '/tencent/';
+    List<String> paths = [];
+    if (isQQ) {
+      paths.add(base + 'MobileQQ/chatpic/chatimg');
+    }
+    paths.add(base + (isQQ ? 'MobileQQ' : 'Tim') + '/diskcache');
+    return paths;
   }
 
   Future<String> get _toPath async {
@@ -140,7 +142,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future copyFlashPicture(String path) async {
+  Future<void> copyFlashPicture(String path, String picture) async {
     var dir = Directory(await _toPath);
     if (!await dir.exists()) {
       await dir.create();
@@ -165,10 +167,10 @@ class _MyHomePageState extends State<MyHomePage> {
     _showResultNotification(picture + '.png');
   }
 
-  Future getFlashPicture() async {
+  Future<void> getFlashPicture() async {
     // 1. Check whether the cache folder exists
-    var exists = await _localPathExists();
-    if (!exists) {
+    var paths = await _validLocalPath();
+    if (paths.isEmpty) {
       await showToast('缓存目录不存在！');
       if (isTaskRunning) {
         isTaskRunning = false;
@@ -178,36 +180,39 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     // 2. Get files in cache folder
-    List<FileSystemEntity> list;
-    try {
-      list = Directory(await _localPath)
-          .listSync(recursive: true)
-          .where((item) => item.uri.pathSegments.last.endsWith('fp'))
-          .toList();
-    } catch (e) {
-      debugPrint(e.toString());
-      return;
-    }
-    if (list.length > 0) {
-      list.sort((a, b) => (a.statSync().modified.millisecondsSinceEpoch <
-              b.statSync().modified.millisecondsSinceEpoch)
-          ? 1
-          : -1);
-
-      for (var item in list) {
-        // await showToast('发现闪照: ' + item.uri.pathSegments.last);
-        // await showToast('修改时间: ' + item.statSync().modified.toString());
-        picture = item.uri.pathSegments.last;
-        await copyFlashPicture(item.path);
+    var pictureCount = 0;
+    paths.forEach((path) {
+      List<FileSystemEntity> list;
+      try {
+        list = Directory(path)
+            .listSync(recursive: true)
+            .where((item) => item.uri.pathSegments.last.endsWith('fp'))
+            .toList();
+      } catch (e) {
+        debugPrint(e.toString());
+        return;
       }
-    }
+      if (list.length > 0) {
+        list.sort((a, b) => (a.statSync().modified.millisecondsSinceEpoch <
+                b.statSync().modified.millisecondsSinceEpoch)
+            ? 1
+            : -1);
 
-    print(picture);
+        for (var item in list) {
+          // await showToast('发现闪照: ' + item.uri.pathSegments.last);
+          // await showToast('修改时间: ' + item.statSync().modified.toString());
+          pictureCount++;
+          var picture = item.uri.pathSegments.last;
+          debugPrint(picture);
+          copyFlashPicture(item.path, picture);
+        }
+      }
+    });
+
     // FlashPicture Not Found
-    if (picture == '' && !isTaskRunning) {
+    if (pictureCount == 0 && !isTaskRunning) {
       await showToast('未发现新的闪照！');
     }
-    picture = ''; // Reset picture
   }
 
   @override
@@ -219,12 +224,11 @@ class _MyHomePageState extends State<MyHomePage> {
       exit(0);
     }
 
-    var initializationSettings = InitializationSettings(
-      AndroidInitializationSettings('app_icon'),
-      IOSInitializationSettings(),
-    );
     notification.initialize(
-      initializationSettings,
+      InitializationSettings(
+        AndroidInitializationSettings('app_icon'),
+        IOSInitializationSettings(),
+      ),
       onSelectNotification: clickNotification,
     );
 
@@ -277,7 +281,8 @@ class _MyHomePageState extends State<MyHomePage> {
         fontSize: 12.0);
   }
 
-  Future<bool> _localPathExists() async => Directory(await _localPath).exists();
+  Future<List<String>> _validLocalPath() async =>
+      (await _localPaths).where((p) => Directory(p).existsSync()).toList();
 
   Future _openImage(String name) =>
       _toPath.then((String path) => OpenFile.open(path + name));

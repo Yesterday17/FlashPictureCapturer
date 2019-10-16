@@ -74,3 +74,6 @@
 *.jks
 *.jks.old
 key.properties
+
+# ios(Android only)
+ios/
