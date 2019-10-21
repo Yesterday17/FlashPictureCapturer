@@ -244,8 +244,22 @@ class _MyHomePageState extends State<MyHomePage> {
 
     checkPermission().then((valid) {
       if (!valid) {
-        showToast('存储权限为必须权限。');
-        requestPermission();
+        showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: Text('隐私条款'),
+                content: Text('本应用通过读取/写入内置存储实现闪照的发现与保存，请允许存储权限。'),
+                actions: <Widget>[
+                  FlatButton(
+                    child: Text('确定'),
+                    onPressed: () {
+                      requestPermission(context);
+                    },
+                  )
+                ],
+              );
+            });
       }
     });
   }
@@ -263,11 +277,13 @@ class _MyHomePageState extends State<MyHomePage> {
         bytes[7] == 0x3A;
   }
 
-  void requestPermission() async {
+  void requestPermission(context) async {
     Map<PermissionGroup, PermissionStatus> status =
         await PermissionHandler().requestPermissions([PermissionGroup.storage]);
     if (status[PermissionGroup.storage] != PermissionStatus.granted) {
       exit(0);
+    } else {
+      Navigator.of(context).pop();
     }
   }
 

@@ -4,6 +4,8 @@ QQ/TIM FlashPicture Getter.
 
 You can get release [here][coolapk-addr].
 
+TODO: Upgrade `androidx.core` version `flutter_local_notifications` uses from `1.0.1` to `1.1.0`.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
