@@ -2,7 +2,7 @@
 
 QQ/TIM FlashPicture Getter.
 
-You can get release [here][coolapk-addr].
+[![](https://steverichey.github.io/google-play-badge-svg/img/en_get.svg)](https://play.google.com/store/apps/details?id=cn.yesterday17.fpc)
 
 ## Getting Started
 
