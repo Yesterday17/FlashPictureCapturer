@@ -1,8 +1,11 @@
-# FlashPictureCapturer
+<h1>
+FlashPictureCapturer
+<a href="https://play.google.com/store/apps/details?id=cn.yesterday17.fpc">
+<img src="https://steverichey.github.io/google-play-badge-svg/img/en_get.svg" height="40px" style="margin-bottom: -.2em;"/>
+</a>
+</h1>
 
 QQ/TIM FlashPicture Getter.
-
-[![](https://steverichey.github.io/google-play-badge-svg/img/en_get.svg)](https://play.google.com/store/apps/details?id=cn.yesterday17.fpc)
 
 ## Getting Started
 
