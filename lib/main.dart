@@ -10,11 +10,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  notification = FlutterLocalNotificationsPlugin();
-  SharedPreferences.getInstance().then((prefs) {
-    preferences = prefs;
-    runApp(MyApp());
-  });
+  runApp(MyApp());
 }
 
 FlutterLocalNotificationsPlugin notification;
@@ -51,12 +47,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<List<String>> get _localPaths async {
     final directory = await getExternalStorageDirectory();
-    final base = directory.path + '/tencent/';
+    final baseOld = directory.path + '/tencent/';
+    final baseNew =
+        directory.path + '/Android/data/com.tencent.mobileqq/Tencent/';
     List<String> paths = [];
     if (isQQ) {
-      paths.add(base + 'MobileQQ/chatpic/chatimg');
+      paths.addAll(
+          [baseOld, baseNew].map((e) => e + 'MobileQQ/chatpic/chatimg'));
     }
-    paths.add(base + (isQQ ? 'MobileQQ' : 'Tim') + '/diskcache');
+    paths.add(baseOld + (isQQ ? 'MobileQQ' : 'Tim') + '/diskcache');
     return paths;
   }
 
@@ -224,6 +223,28 @@ class _MyHomePageState extends State<MyHomePage> {
       exit(0);
     }
 
+    notification = FlutterLocalNotificationsPlugin();
+    SharedPreferences.getInstance().then((prefs) {
+      preferences = prefs;
+
+      isRunning = preferences.getBool('isRunning') ?? false;
+      isTaskRunning =
+          isRunning ? (preferences.getBool('isTaskRunning') ?? false) : false;
+      isQQ = preferences.getBool('isQQ') ?? true;
+
+      if (isRunning) {
+        isRunning = false;
+        _showNotification();
+      }
+
+      checkPermission().then((valid) {
+        if (!valid) {
+          showToast('存储权限为必须权限。');
+          requestPermission();
+        }
+      });
+    });
+
     notification.initialize(
       InitializationSettings(
         AndroidInitializationSettings('app_icon'),
@@ -231,23 +252,6 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       onSelectNotification: clickNotification,
     );
-
-    isRunning = preferences.getBool('isRunning') ?? false;
-    isTaskRunning =
-        isRunning ? (preferences.getBool('isTaskRunning') ?? false) : false;
-    isQQ = preferences.getBool('isQQ') ?? true;
-
-    if (isRunning) {
-      isRunning = false;
-      _showNotification();
-    }
-
-    checkPermission().then((valid) {
-      if (!valid) {
-        showToast('存储权限为必须权限。');
-        requestPermission();
-      }
-    });
   }
 
   Future<bool> isEncrypted(String path) async {

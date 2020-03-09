@@ -13,7 +13,7 @@ dependencies:
   flutter_local_notifications: 0.8.2
   path_provider: 0.5.0
   permission_handler: 3.2.2
-  shared_preferences: 0.5.3+4
+  shared_preferences: ^0.5.6
   fluttertoast: 3.1.2
   open_file: 2.0.3
 
