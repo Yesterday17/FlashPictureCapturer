@@ -240,7 +240,7 @@ class _MyHomePageState extends State<MyHomePage> {
       checkPermission().then((valid) {
         if (!valid) {
           showToast('存储权限为必须权限。');
-          requestPermission();
+          requestPermission(context);
         }
       });
     });
@@ -267,11 +267,13 @@ class _MyHomePageState extends State<MyHomePage> {
         bytes[7] == 0x3A;
   }
 
-  void requestPermission() async {
+  void requestPermission(context) async {
     Map<PermissionGroup, PermissionStatus> status =
         await PermissionHandler().requestPermissions([PermissionGroup.storage]);
     if (status[PermissionGroup.storage] != PermissionStatus.granted) {
       exit(0);
+    } else {
+      Navigator.of(context).pop();
     }
   }
 
