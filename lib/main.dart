@@ -9,7 +9,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-void main() => runApp(MyApp());
+void main() {
+  runApp(MyApp());
+}
 
 FlutterLocalNotificationsPlugin notification;
 SharedPreferences preferences;
@@ -145,11 +147,11 @@ class _MyHomePageState extends State<MyHomePage> {
       await dir.create();
     }
 
-    debugPrint(File(path).hashCode.toString());
-
     if (await isEncrypted(path)) {
-      await File(path).delete();
-      await showToast('发现加密闪照，已移除。');
+      try {
+        await File(path).delete();
+        await showToast('发现加密闪照，已移除。');
+      } finally {}
       return;
     }
 
@@ -186,7 +188,6 @@ class _MyHomePageState extends State<MyHomePage> {
             .where((item) => item.uri.pathSegments.last.endsWith('fp'))
             .toList();
       } catch (e) {
-        debugPrint(e.toString());
         return;
       }
       if (list.length > 0) {
@@ -200,7 +201,6 @@ class _MyHomePageState extends State<MyHomePage> {
           // await showToast('修改时间: ' + item.statSync().modified.toString());
           pictureCount++;
           var picture = item.uri.pathSegments.last;
-          debugPrint(picture);
           copyFlashPicture(item.path, picture);
         }
       }
@@ -224,6 +224,13 @@ class _MyHomePageState extends State<MyHomePage> {
     notification = FlutterLocalNotificationsPlugin();
     SharedPreferences.getInstance().then((prefs) {
       preferences = prefs;
+      notification.initialize(
+        InitializationSettings(
+          AndroidInitializationSettings('app_icon'),
+          IOSInitializationSettings(),
+        ),
+        onSelectNotification: clickNotification,
+      );
 
       isRunning = preferences.getBool('isRunning') ?? false;
       isTaskRunning =
@@ -238,18 +245,10 @@ class _MyHomePageState extends State<MyHomePage> {
       checkPermission().then((valid) {
         if (!valid) {
           showToast('存储权限为必须权限。');
-          requestPermission(context);
+          requestPermission();
         }
       });
     });
-
-    notification.initialize(
-      InitializationSettings(
-        AndroidInitializationSettings('app_icon'),
-        IOSInitializationSettings(),
-      ),
-      onSelectNotification: clickNotification,
-    );
   }
 
   Future<bool> isEncrypted(String path) async {
@@ -265,13 +264,11 @@ class _MyHomePageState extends State<MyHomePage> {
         bytes[7] == 0x3A;
   }
 
-  void requestPermission(context) async {
+  void requestPermission() async {
     Map<PermissionGroup, PermissionStatus> status =
         await PermissionHandler().requestPermissions([PermissionGroup.storage]);
     if (status[PermissionGroup.storage] != PermissionStatus.granted) {
       exit(0);
-    } else {
-      Navigator.of(context).pop();
     }
   }
 
